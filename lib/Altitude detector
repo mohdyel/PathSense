@@ -1,0 +1,88 @@
+import 'dart:async';
+import 'dart:math'; // Import for the pow function
+import 'package:flutter/material.dart';
+import 'package:flutter_barometer/flutter_barometer.dart'; // Ensure this package is correctly added to pubspec.yaml
+
+void main() {
+  runApp(MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Barometer Altitude',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: BarometerAltitudePage(),
+    );
+  }
+}
+
+class BarometerAltitudePage extends StatefulWidget {
+  @override
+  _BarometerAltitudePageState createState() => _BarometerAltitudePageState();
+}
+
+class _BarometerAltitudePageState extends State<BarometerAltitudePage> {
+  // Change the subscription type if your stream emits a different type of event.
+  late StreamSubscription<FlutterBarometerEvent> _barometerSubscription;
+
+  double? _pressure;  // in hPa
+  double? _altitude;  // in meters
+  final double seaLevelPressure = 1013.25; // standard sea level pressure in hPa
+
+  @override
+  void initState() {
+    super.initState();
+    _startBarometer();
+  }
+
+  void _startBarometer() {
+    // Listen to the barometer event stream as provided by the flutter_barometer package.
+    _barometerSubscription = flutterBarometerEvents.listen((event) {
+      setState(() {
+        // Ensure that your event has the property 'pressure'.
+        _pressure = event.pressure;
+        _altitude = _calculateAltitude(event.pressure);
+      });
+    });
+  }
+
+  double _calculateAltitude(double pressure) {
+    // International Barometric Formula for calculating altitude.
+    return 44330.0 * (1.0 - pow(pressure / seaLevelPressure, 0.1903));
+  }
+
+  @override
+  void dispose() {
+    _barometerSubscription.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Barometric Altitude')),
+      body: Center(
+        child: _altitude != null
+            ? Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'Altitude: ${_altitude!.toStringAsFixed(2)} m',
+                    style: TextStyle(fontSize: 24),
+                  ),
+                  SizedBox(height: 10),
+                  Text(
+                    'Pressure: ${_pressure!.toStringAsFixed(2)} hPa',
+                    style: TextStyle(fontSize: 16),
+                  ),
+                ],
+              )
+            : Text('Reading barometric sensor...'),
+      ),
+    );
+  }
+}
